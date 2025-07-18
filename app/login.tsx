@@ -1,10 +1,19 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Button, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Button,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useAuth } from '../components/AuthProvider';
+import Colors from '../constants/Colors';
 
 export default function LoginScreen() {
-  const { login } = useAuth(); // ✅ Only use login here
+  const { login } = useAuth();
   const router = useRouter();
 
   const [username, setUsername] = useState('');
@@ -16,22 +25,26 @@ export default function LoginScreen() {
     setError(null);
     setLoading(true);
     try {
-      console.log("Attempting login with:", username, password);
+      console.log('Attempting login with:', username, password);
       const { success, token } = await login(username.trim(), password);
-
-      console.log("Login result:", { success, token });
+      console.log('Login result:', { success, token });
 
       if (!success || !token) {
         setError('Invalid credentials. Please try again.');
-        setLoading(false);
         return;
       }
 
-      // Navigate to dashboard after successful login (token is in context)
       if (Platform.OS === 'web') {
-        window.location.href = `https://highwayads.net/driver-dashboard/?token=${encodeURIComponent(token)}`;
+        // Hard-redirect on web so the JWT ends up in a cookie
+        window.location.href = `https://highwayads.net/driver-dashboard/?token=${encodeURIComponent(
+          token
+        )}`;
       } else {
-        router.replace('/driver-dashboard');
+        // In-app navigate on native
+        router.replace({
+          pathname: '/driver-dashboard',
+          params: { token },
+        });
       }
     } catch (e) {
       console.error('Login error', e);
@@ -43,28 +56,41 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.banner}>Driver Login</Text>
-      <TextInput
-        value={username}
-        onChangeText={setUsername}
-        placeholder="Username"
-        style={styles.input}
-        autoCapitalize="none"
-      />
-      <TextInput
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Password"
-        secureTextEntry
-        style={styles.input}
-      />
-      {error && <Text style={styles.error}>{error}</Text>}
-      <Button
-        title={loading ? "Logging in..." : "Login"}
-        onPress={handleLogin}
-        disabled={loading || !username || !password}
-      />
-      {loading && <ActivityIndicator style={{ marginTop: 16 }} />}
+      <View style={styles.banner}>
+        <Text style={styles.bannerText}>Driver Login</Text>
+      </View>
+      <View style={styles.card}>
+        <TextInput
+          style={styles.input}
+          placeholder="Username"
+          autoCapitalize="none"
+          value={username}
+          onChangeText={setUsername}
+          placeholderTextColor={Colors.primary + '99'}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+          placeholderTextColor={Colors.primary + '99'}
+        />
+        {error && <Text style={styles.error}>{error}</Text>}
+        <Button
+          title={loading ? 'Logging in…' : 'Login'}
+          onPress={handleLogin}
+          disabled={loading || !username || !password}
+          color={Colors.highlight}
+        />
+        {loading && (
+          <ActivityIndicator
+            style={{ marginTop: 16 }}
+            size="large"
+            color={Colors.highlight}
+          />
+        )}
+      </View>
     </View>
   );
 }
@@ -72,18 +98,16 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4fdfb',
+    backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 0,
   },
   banner: {
     width: '100%',
-    backgroundColor: '#26413C', // dark header (match dashboard)
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 40,
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.08,
@@ -91,84 +115,39 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   bannerText: {
-    color: '#fff',
+    color: Colors.white,
     fontWeight: 'bold',
     fontSize: 18,
     letterSpacing: 1.2,
   },
   card: {
     width: '90%',
-    maxWidth: 520,
+    marginTop: 40,
+    padding: 24,
+    backgroundColor: Colors.card,
     borderRadius: 22,
-    backgroundColor: '#f8fcfa', // soft mint/white (matches dashboard card)
-    padding: 32,
     alignItems: 'stretch',
-    shadowColor: '#5ed2b6',
-    shadowOffset: { width: 0, height: 12 },
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 7 },
     shadowOpacity: 0.13,
     shadowRadius: 22,
     elevation: 7,
-    marginTop: 30,
-    marginBottom: 20,
-    // Web hover effect (use in React Native Web)
-    transitionProperty: 'box-shadow, transform',
-    transitionDuration: '180ms',
-    transitionTimingFunction: 'ease',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#2d6a4f',
-    textAlign: 'center',
-    marginBottom: 18,
   },
   input: {
-    backgroundColor: '#e7f8f2',
-    borderRadius: 8,
+    backgroundColor: '#e8faf4',
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#b9e4d6',
-    padding: 14,
-    marginBottom: 16,
+    borderColor: Colors.border,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
     fontSize: 17,
-    color: '#26413C',
-  },
-  loginButton: {
-    backgroundColor: '#40916c',
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 16,
-    elevation: 1,
-    shadowColor: '#40916c',
-    shadowOpacity: 0.12,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 6,
-    // pill shape
-    width: '100%',
-    opacity: 1,
-    transitionProperty: 'background, box-shadow, transform, opacity',
-    transitionDuration: '140ms',
-    transitionTimingFunction: 'ease',
-  },
-  loginButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
-    letterSpacing: 2,
-  },
-  loginButtonPressed: {
-    backgroundColor: '#52b788',
-    transform: [{ scale: 0.98 }],
-    shadowOpacity: 0.20,
-  },
-  loginButtonDisabled: {
-    backgroundColor: '#b9e4d6',
-    opacity: 0.7,
+    marginBottom: 16,
+    color: Colors.primary,
   },
   error: {
-    color: 'red',
+    color: '#a2261e',
     marginBottom: 12,
     textAlign: 'center',
+    fontWeight: 'bold',
   },
 });
-
