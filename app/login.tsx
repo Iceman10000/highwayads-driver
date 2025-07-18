@@ -1,19 +1,12 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
-} from 'react-native';
+import { ActivityIndicator, Button, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../components/AuthProvider';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login } = useAuth(); // ✅ Only use login here
   const router = useRouter();
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -23,77 +16,55 @@ export default function LoginScreen() {
     setError(null);
     setLoading(true);
     try {
-      const { success, role, token = '' } = await login(username.trim(), password);
+      console.log("Attempting login with:", username, password);
+      const { success, token } = await login(username.trim(), password);
+
+      console.log("Login result:", { success, token });
 
       if (!success || !token) {
         setError('Invalid credentials. Please try again.');
+        setLoading(false);
         return;
       }
 
+      // Navigate to dashboard after successful login (token is in context)
       if (Platform.OS === 'web') {
         window.location.href = `https://highwayads.net/driver-dashboard/?token=${encodeURIComponent(token)}`;
       } else {
-        router.replace({
-          pathname: '/driver-dashboard',
-          params: { token },
-        });
+        router.replace('/driver-dashboard');
       }
     } catch (e) {
-      setError('An unexpected error occurred.');
       console.error('Login error', e);
+      setError('An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
   };
 
-  const isButtonDisabled = !username.trim() || !password.trim();
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#40916c" />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      {/* Banner/Header */}
-      <View style={styles.banner}>
-        <Text style={styles.bannerText}>WELCOME TO HIGHWAYADS</Text>
-      </View>
-
-      {/* Card */}
-      <View style={styles.card}>
-        <Text style={styles.title}>Driver Login</Text>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          autoCapitalize="none"
-          value={username}
-          onChangeText={setUsername}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-        {/* Pill button with disabled state */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.loginButton,
-            isButtonDisabled ? styles.loginButtonDisabled : null,
-            pressed && !isButtonDisabled ? styles.loginButtonPressed : null,
-          ]}
-          onPress={handleLogin}
-          disabled={isButtonDisabled}
-        >
-          <Text style={styles.loginButtonText}>LOGIN</Text>
-        </Pressable>
-      </View>
+      <Text style={styles.banner}>Driver Login</Text>
+      <TextInput
+        value={username}
+        onChangeText={setUsername}
+        placeholder="Username"
+        style={styles.input}
+        autoCapitalize="none"
+      />
+      <TextInput
+        value={password}
+        onChangeText={setPassword}
+        placeholder="Password"
+        secureTextEntry
+        style={styles.input}
+      />
+      {error && <Text style={styles.error}>{error}</Text>}
+      <Button
+        title={loading ? "Logging in..." : "Login"}
+        onPress={handleLogin}
+        disabled={loading || !username || !password}
+      />
+      {loading && <ActivityIndicator style={{ marginTop: 16 }} />}
     </View>
   );
 }
