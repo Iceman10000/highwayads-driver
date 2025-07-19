@@ -3,7 +3,7 @@
     "name": "highwayads-driver",
     "slug": "highwayads-driver",
     "version": "1.0.1",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "highwayadsdriver",
     "userInterfaceStyle": "automatic",
@@ -30,7 +30,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/favicon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#f4fdfb"
