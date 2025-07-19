@@ -2,7 +2,7 @@
   "expo": {
     "name": "highwayads-driver",
     "slug": "highwayads-driver",
-    "version": "1.0.1",
+    "version": "1.0.1.2",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "highwayadsdriver",
@@ -18,7 +18,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.kevin100.highwayadsdriver",
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "bundler": "metro",
