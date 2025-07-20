@@ -1,18 +1,29 @@
 // constants/Colors.ts
 const Colors = {
-  background: '#f4fdfb',   // already had something similar
-  card: '#ffffff',
-  primary: '#2d6a4f',
-  accent: '#52b788',       // if you didn’t already have this
-  highlight: '#40916c',
-  border: '#d2e8dd',
-  shadow: '#000000',
-  white: '#ffffff',
+  /* App surface tones ----------------------------------------------------- */
+  background: '#f4fdfb',
+  card:        '#ffffff',
+
+  /* Brand greens ---------------------------------------------------------- */
+  primary:   '#2d6a4f',   // headings, hero title
+  highlight: '#40916c',   // buttons, accents
+  accent:    '#52b788',   // secondary accent / gradients
+
+  /* Utility ----------------------------------------------------------------*/
+  border:   '#d2e8dd',
+  shadow:   '#000000',
+  white:    '#ffffff',
   disabled: '#c8d9d2',
-  text: '#1f3a2d',         // base text (optional)
-  textSubtle: '#2d6a4f99', // 60% opacity version of primary
-  danger: '#a2261e',       // from earlier error styles
-};
+
+  /* Text -------------------------------------------------------------------*/
+  text:        '#1f3a2d',
+  textSubtle:  '#2d6a4f99',
+  danger:      '#a2261e',
+
+  /* NEW – banner / nav bar -------------------------------------------------*/
+  banner:  '#0f3e46',   // the dark teal top strip
+  brandBg: '#13525d',   // optional lighter companion
+} as const;
 
 export default Colors;
 export type ColorKeys = keyof typeof Colors;

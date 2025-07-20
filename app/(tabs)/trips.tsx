@@ -1,99 +1,132 @@
-// app/(tabs)/trips.tsx (example screen)
-import { queueItemToTrip } from '@/utils/queueToTrip'; // ← alias form
-import React, { useEffect } from 'react';
-import { ActivityIndicator, Button, FlatList, RefreshControl, Text, View } from 'react-native';
+// app/(tabs)/trips.tsx
+import React from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import Colors from '../../constants/Colors';
 import { useDriverTrips } from '../../hooks/useDriverTrips';
-import { useTripQueue } from '../../hooks/useTripQueue';
 
 export default function TripsScreen() {
-  const {
-    trips,
-    loading,
-    refreshing,
-    error,
-    loadMore,
-    refresh,
-    appendTripOptimistic,
-  } = useDriverTrips();
-
-  const {
-    queue,
-    flushing,
-    addTrip,
-    flush,
-  } = useTripQueue({ autoFlush: true });
-
-  // When queue items get serverId after flush, optimistically append
-  useEffect(() => {
-    queue.forEach(q => {
-      if (q.status === 'sent' && q.serverId) {
-        appendTripOptimistic(queueItemToTrip(q));
-      }
-    });
-  }, [queue, appendTripOptimistic]);
+  const { trips, loading, error, refreshing, refresh } = useDriverTrips();
 
   return (
-    <View style={{ flex: 1 }}>
-      {error && <Text style={{ color: 'red', padding: 8 }}>{error}</Text>}
-      <View style={{ flexDirection: 'row', padding: 8, gap: 12 }}>
-        <Button
-          title="Add Test Trip"
-          onPress={() =>
-            addTrip({
-              route: 'Morning Route',
-              miles: 12.4,
-              earnings: 18.5,
-              trip_date: new Date().toISOString().slice(0, 10),
-              status: 'Active',
-              impressions: 250,
-            })
-          }
-        />
-        <Button title="Force Flush" onPress={flush} disabled={flushing} />
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Trips</Text>
       </View>
-
-      {queue.length > 0 && (
-        <Text style={{ paddingHorizontal: 8, color: '#555' }}>
-          Pending: {queue.filter(q => q.status !== 'sent').length} (flushing: {flushing ? 'yes' : 'no'})
-        </Text>
+      {loading && !trips.length ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={Colors.highlight} />
+        </View>
+      ) : (
+        <FlatList
+          data={trips}
+          keyExtractor={(item) => (item.id ? String(item.id) : item.route + item.trip_date)}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={refresh}
+              tintColor={Colors.highlight}
+            />
+          }
+          ListEmptyComponent={
+            !loading ? (
+              <View style={styles.empty}>
+                <Text style={styles.emptyText}>No trips yet.</Text>
+              </View>
+            ) : null
+          }
+          renderItem={({ item }) => (
+            <View style={styles.tripCard}>
+              <Text style={styles.route}>{item.route || '—'}</Text>
+              <Text style={styles.metaLine}>
+                Miles: <Text style={styles.metaValue}>{item.miles ?? 0}</Text> |{' '}
+                Earnings: <Text style={styles.metaValue}>${item.earnings ?? 0}</Text>
+              </Text>
+              <Text style={styles.metaSub}>
+                {item.trip_date || 'Unknown date'} / Status: {item.status || 'Active'}
+              </Text>
+            </View>
+          )}
+        />
       )}
-
-      <FlatList
-        data={trips}
-        keyExtractor={(item) => item.id.toString()}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
-        }
-        onEndReachedThreshold={0.4}
-        onEndReached={() => loadMore()}
-        renderItem={({ item }) => (
-          <View
-            style={{
-              padding: 12,
-              borderBottomWidth: 1,
-              borderColor: '#eee',
-              backgroundColor: item.id < 0 ? '#fff9e6' : '#fff',
-            }}
-          >
-            <Text style={{ fontWeight: '600' }}>{item.route}</Text>
-            <Text style={{ fontSize: 12, opacity: 0.7 }}>
-              {item.date} • {item.miles} mi • ${item.earnings.toFixed(2)}
-            </Text>
-          </View>
-        )}
-        ListFooterComponent={() =>
-          loading ? (
-            <ActivityIndicator style={{ marginVertical: 16 }} />
-          ) : null
-        }
-        ListEmptyComponent={() =>
-          !loading && !refreshing ? (
-            <Text style={{ padding: 20, textAlign: 'center', opacity: 0.6 }}>
-              No trips yet.
-            </Text>
-          ) : null
-        }
-      />
+      {error && (
+        <View style={styles.errorBar}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: Colors.background },
+  header: {
+    paddingTop: 18,
+    paddingBottom: 10,
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  listContent: { padding: 16, paddingBottom: 60 },
+  tripCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    shadowColor: Colors.shadow,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  route: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginBottom: 6,
+  },
+  metaLine: {
+    fontSize: 13,
+    color: Colors.primary,
+    marginBottom: 4,
+  },
+  metaValue: {
+    fontWeight: '700',
+    color: Colors.highlight,
+  },
+  metaSub: {
+    fontSize: 11.5,
+    color: Colors.primary,
+    opacity: 0.7,
+  },
+  empty: { padding: 40, alignItems: 'center' },
+  emptyText: { color: Colors.primary, opacity: 0.6 },
+  errorBar: {
+    position: 'absolute',
+    left: 0, right: 0, bottom: 0,
+    backgroundColor: '#ffe5e2',
+    padding: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#f2b4ac',
+  },
+  errorText: {
+    textAlign: 'center',
+    color: '#b03021',
+    fontWeight: '600',
+  },
+});

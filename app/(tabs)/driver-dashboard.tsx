@@ -12,18 +12,16 @@ export default function DriverDashboardScreen() {
   const { token, logout } = useAuth();
   const params = useLocalSearchParams();
 
-  // Web-only route token
   const paramToken =
     Platform.OS === 'web' && typeof params.token === 'string'
       ? params.token
       : undefined;
 
   const effectiveToken = useMemo(
-    () => (Platform.OS === 'web' ? (paramToken || token) : token),
+    () => (Platform.OS === 'web' ? paramToken || token : token),
     [paramToken, token]
   );
 
-  // Redirect guard (native)
   useEffect(() => {
     if (!effectiveToken) {
       router.replace('/login');
@@ -38,12 +36,9 @@ export default function DriverDashboardScreen() {
     );
   }
 
-  const query = `?token=${encodeURIComponent(
-    effectiveToken
-  )}&appEmbed=1`; // appEmbed hides WP chrome (add CSS in WP)
+  const query = `?token=${encodeURIComponent(effectiveToken)}&appEmbed=1`;
   const finalUrl = `${DASHBOARD_URL_BASE}${query}`;
 
-  /* ---------- Web (iframe) ---------- */
   if (Platform.OS === 'web') {
     return (
       <div style={webStyles.wrapper}>
@@ -51,14 +46,12 @@ export default function DriverDashboardScreen() {
           title="Driver Dashboard"
           src={finalUrl}
           style={webStyles.iframe}
-          // Relax 'sandbox' if you need more capabilities
           sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
         />
       </div>
     );
   }
 
-  /* ---------- Native (WebView) ---------- */
   return (
     <View style={styles.container}>
       <WebView
@@ -75,8 +68,7 @@ export default function DriverDashboardScreen() {
         )}
         onShouldStartLoadWithRequest={(event) => {
           const { url } = event;
-          // WP logout inside iframe
-          if (url.includes('wp-login.php') && url.includes('loggedout')) {
+            if (url.includes('wp-login.php') && url.includes('loggedout')) {
             logout();
             router.replace('/login');
             return false;
@@ -94,9 +86,7 @@ export default function DriverDashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex: 1, alignItems: 'center', justifyContent: 'center',
     backgroundColor: Colors.background,
   },
 });
