@@ -65,18 +65,24 @@ export default function HomeScreen() {
   const updatedTime = new Date().toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
-    second: "2-digit",
   });
 
-  /* ---------------- actions ---------------- */
+/**
++   * Open the WordPress driver dashboard
++   *
++   * ▸ Web → new tab with **token** query‑string that WP recognises  
++   * ▸ Native → in‑app route that wraps a WebView (unchanged)
++   */
   const handleOpenDashboard = () => {
     if (Platform.OS === 'web') {
       const base = 'https://highwayads.net/driver-dashboard/';
-      window.open(
-        `${base}?driver_jwt=${encodeURIComponent(token || '')}`,
-        '_blank',
-        'noopener',
-      );
+
+      /*  WP’s login bridge now looks for  ?token=<JWT> */
+      const url = token
+        ? `${base}?token=${encodeURIComponent(token)}`
+        : base;                   // falls back to cookie session
+
+      window.open(url, '_blank', 'noopener');
     } else {
       router.push('/driver-dashboard');
     }

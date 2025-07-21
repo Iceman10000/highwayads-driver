@@ -1,8 +1,5 @@
 // app/(tabs)/_layout.tsx
-import { MaterialIcons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Colors from '../../constants/Colors';
 
 type SimpleTabBarProps = {
@@ -13,57 +10,7 @@ type SimpleTabBarProps = {
 function FloatingHomeTabBar({ state, navigation }: SimpleTabBarProps) {
   // Only two (or three) screens: home, driver-dashboard, trips?
   const focusedRoute = state.routes[state.index];
-  const isHome = focusedRoute.name === 'home';
-
-  return (
-    <View pointerEvents="box-none" style={styles.wrapper}>
-      <Pressable
-        onPress={() => {
-          if (!isHome) navigation.navigate('home');
-        }}
-        style={({ pressed }) => [
-          styles.pill,
-          isHome && styles.pillActive,
-          pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] },
-        ]}
-      >
-        <MaterialIcons
-          name="home"
-            size={24}
-            color={isHome ? '#fff' : Colors.primary}
-        />
-        <Text style={[styles.pillLabel, isHome && styles.pillLabelActive]}>
-          Home
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
-
-export default function TabsLayout() {
-  return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: { display: 'none' },
-      }}
-      tabBar={(props) => <FloatingHomeTabBar {...props} />}
-    >
-      <Tabs.Screen name="home" options={{}} />
-      <Tabs.Screen
-        name="driver-dashboard"
-        options={{
-          href: '/driver-dashboard',
-        }}
-      />
-      <Tabs.Screen
-        name="trips"
-        options={{
-          href: '/trips',
-        }}
-      />
-    </Tabs>
-  );
+  const isHome = focusedRoute.name === 'home'; 
 }
 
 const styles = StyleSheet.create({
