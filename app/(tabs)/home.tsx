@@ -1,12 +1,3 @@
-/* -------------------------------------------------------------------------
-   Home – Driver quick‑actions screen
-   -------------------------------------------------------------------------
-   • Expo Router tab: /home
-   • Works on native + web
-   • Pop‑out focus card on hover (web only)
-   • “Open Dashboard” opens WP dashboard (web) or pushes /driver‑dashboard
-   ---------------------------------------------------------------------- */
-
 import {
   AntDesign,
   Entypo,
@@ -14,11 +5,14 @@ import {
   FontAwesome,
   MaterialIcons,
 } from '@expo/vector-icons';
-import { router, usePathname } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import { format } from 'date-fns';
+import { router } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  Image,
   Linking,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,130 +22,185 @@ import {
 import { useAuth } from '../../components/AuthProvider';
 import Colors from '../../constants/Colors';
 
-/* ───────── constants ───────── */
+/* ---- Constants ---- */
 const MAX_WIDTH = 860;
-const BUTTON_MAX_WIDTH = 740;
-const SHOW_HOME_PILL_WHEN_ACTIVE = false;
+const bannerGreen = '#0f3e46';
+const primaryDark = '#124634';
+const cardBg = '#fff';
+const cardShadow = Colors.shadow || '#14342B';
+const actionGreen = '#2f7d55';
+const actionGreenD = '#1f5b43';
 
-/* brand palette for this page */
-const bannerGreen   = '#0f3e46';
-const primaryDark   = '#124634';
-const cardBg        = '#e8f2ed99';   // translucent mint
-const actionGreen   = '#2f7d55';
-const actionGreenD  = '#1f5b43';
-
-/* ---------------------------------------------------------------------- */
 export default function HomeScreen() {
   const { logout, token } = useAuth();
-  const pathname         = usePathname();
 
-  /* re‑render each minute so the timestamp stays fresh */
-  const [, setTick] = useState(0);
+  // Driver info
+  const [driverName, setDriverName] = useState('Driver');
+  const [driverEmail, setDriverEmail] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState('');
+  const [lifetimeImpressions, setLifetimeImpressions] = useState(0);
+  const [pendingPayments, setPendingPayments] = useState(0);
+  const [assignmentCount, setAssignmentCount] = useState(0);
+  const [assignments, setAssignments] = useState([]);
+
+  // Dashboard metrics
+  const [miles, setMiles] = useState(0);
+  const [impressions, setImpressions] = useState(0);
+  const [earnings, setEarnings] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [refreshing, setRefreshing] = useState(false);
+
+  // ---- Fetch driver + dashboard data ----
+  const fetchStats = useCallback(async () => {
+    if (!token) return;
+    try {
+      setRefreshing(true);
+      const res = await fetch(
+        'https://highwayads.net/wp-json/highwayads/v1/driver-assignments',
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+
+      setDriverName(json.driver_name ?? 'Driver');
+      setDriverEmail(json.driver_email ?? '');
+      setProfilePhoto(json.profile_photo ?? '');
+      setLifetimeImpressions(json.lifetime_impressions ?? 0);
+      setPendingPayments(json.pending_payments ?? 0);
+      setAssignmentCount(json.assignments?.length ?? 0);
+      setAssignments(Array.isArray(json.assignments) ? json.assignments : []);
+      setMiles(json.total_miles ?? 0);
+      setImpressions(json.impressions ?? 0);
+      setEarnings(0);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error('[Home] fetchStats error:', err);
+      setLastUpdated(new Date());
+    } finally {
+      setRefreshing(false);
+    }
+  }, [token]);
+
   useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 60_000);
+    fetchStats();
+    const id = setInterval(fetchStats, 1000 * 60 * 1); // 1-min refresh
     return () => clearInterval(id);
-  }, []);
+  }, [fetchStats]);
 
-  /* fake metrics (hook your API later) */
-  const metrics = useMemo(
-    () => [
-      { label: 'MILES',            value: 0 },
-      { label: 'IMPRESSIONS',      value: 0 },
-      { label: 'ACTIVE CAMPAIGNS', value: 0 },
-    ],
-    []
-  );
-
-  const updatedTime = new Date().toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-/**
-+   * Open the WordPress driver dashboard
-+   *
-+   * ▸ Web → new tab with **token** query‑string that WP recognises  
-+   * ▸ Native → in‑app route that wraps a WebView (unchanged)
-+   */
+  // ---- Actions ----
   const handleOpenDashboard = () => {
     if (Platform.OS === 'web') {
       const base = 'https://highwayads.net/driver-dashboard/';
-
-      /*  WP’s login bridge now looks for  ?token=<JWT> */
-      const url = token
-        ? `${base}?token=${encodeURIComponent(token)}`
-        : base;                   // falls back to cookie session
-
-      window.open(url, '_blank', 'noopener');
+      window.open(
+        `${base}?driver_jwt=${encodeURIComponent(token || '')}`,
+        '_blank',
+        'noopener'
+      );
     } else {
       router.push('/driver-dashboard');
     }
   };
-
   const handleLogout = async () => {
     await logout();
     router.replace('/login');
   };
 
-  /* ------------- hover state (web only) ------------- */
-  const [hover, setHover] = useState(false);
-
-  /* floating pill visible only off‑home unless override */
-  const showHomePill =
-    SHOW_HOME_PILL_WHEN_ACTIVE ||
-    (pathname !== '/home' && pathname !== '/(tabs)/home');
-
-  /* ------------------------------------------------------------------ */
   return (
     <View style={styles.screen}>
-      {/* banner */}
       <View style={styles.banner}>
-        <Text style={styles.bannerText}>WELCOME TO HIGHWAYADS APP</Text>
+        <Text style={styles.bannerText}>WELCOME TO HIGHWAYADS APP</Text>
       </View>
-
-      {/* main scroll */}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={fetchStats}
+            colors={[Colors.accent]}
+            tintColor={Colors.accent}
+          />
+        }
       >
         <View style={styles.centerWrap}>
-          <Text style={styles.title}>Home</Text>
-          <Text style={styles.subtitle}>
-            Quick overview &amp; actions. Expand this screen later with live
-            stats, current campaign info, and trip shortcuts.
-          </Text>
-
-          {/* focus card */}
-          <View
-            {...(Platform.OS === 'web' && {
-              onMouseEnter: () => setHover(true),
-              onMouseLeave: () => setHover(false),
-            })}
-            style={[
-              styles.focusGroup,
-              hover && Platform.OS === 'web' && styles.focusGroupHover,
-            ]}
-          >
-            {/* metrics */}
+          {/* Single Modern Card */}
+          <View style={styles.mainCard}>
+            {/* Profile Row */}
+            <View style={styles.profileRow}>
+              <View style={styles.avatarCircle}>
+                {profilePhoto ? (
+                  <Image
+                    source={{ uri: profilePhoto }}
+                    style={styles.avatarImg}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <FontAwesome name="user-circle" size={54} color={primaryDark} />
+                )}
+              </View>
+              <View style={styles.profileDetails}>
+                <Text style={styles.profileName}>Welcome, {driverName}!</Text>
+                {!!driverEmail && (
+                  <Text style={styles.profileEmail}>{driverEmail}</Text>
+                )}
+              </View>
+            </View>
+            {/* Stats Row */}
+            <View style={styles.statsGrid}>
+              <StatBlock
+                icon={
+                  <MaterialIcons name="assignment-turned-in" size={19} color={actionGreen} />
+                }
+                label="Assignments"
+                value={assignmentCount}
+              />
+              <StatBlock
+                icon={<AntDesign name="star" size={18} color="#d4af37" />}
+                label="Lifetime Impressions"
+                value={lifetimeImpressions}
+              />
+              <StatBlock
+                icon={<MaterialIcons name="payment" size={19} color="#d12c2c" />}
+                label="Pending Payments"
+                value={pendingPayments}
+              />
+            </View>
+            {/* Assignment List */}
+            {assignments.length > 0 && (
+              <View style={styles.assignmentList}>
+                {assignments.map((a: any) => (
+                  <TouchableOpacity
+                    key={a.id}
+                    onPress={() => openURL(a.link)}
+                    style={styles.assignmentItem}
+                  >
+                    <Feather name="map-pin" size={15} color={actionGreenD} />
+                    <Text style={styles.assignmentTitle}>{a.title}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {/* Divider */}
+            <View style={styles.cardDivider} />
+            {/* Dashboard Metrics */}
             <View style={styles.metricsRow}>
-              {metrics.map((m, i) => (
-                <View key={i} style={styles.metricBlock}>
-                  <Text style={styles.metricValue}>{m.value}</Text>
-                  <Text style={styles.metricLabel}>{m.label}</Text>
-                </View>
-              ))}
+              <MetricBlock label="MILES" value={miles} />
+              <MetricBlock label="IMPRESSIONS" value={impressions} />
+              <MetricBlock label="EARNINGS" value={`$${earnings}`} />
             </View>
-
-            {/* timestamp */}
-            <View style={styles.timestampRow}>
-              <Text style={styles.updatedText}>Updated {updatedTime}</Text>
-            </View>
-
-            {/* buttons */}
+            {/* Timestamp */}
+            {lastUpdated && (
+              <View style={styles.timestampRow}>
+                <Text style={styles.updatedText}>
+                  Updated {format(lastUpdated, 'hh:mm a')}
+                </Text>
+              </View>
+            )}
+            {/* Action Buttons */}
             <View style={styles.actionsWrap}>
               <ActionButton
                 icon="open-in-new"
-                label="Open Dashboard"
+                label="Open Dashboard"
                 onPress={handleOpenDashboard}
                 background={actionGreen}
               />
@@ -163,13 +212,11 @@ export default function HomeScreen() {
               />
             </View>
           </View>
-
-          {/* footer */}
+          {/* Footer */}
           <View style={styles.footerRow}>
             <Text style={styles.footerCopy}>
-              © {new Date().getFullYear()} Highway Ads. All rights reserved.
+              © {new Date().getFullYear()} Highway Ads. All rights reserved.
             </Text>
-
             <View style={styles.socialRow}>
               <SocialIcon
                 aria="Facebook"
@@ -177,28 +224,24 @@ export default function HomeScreen() {
               >
                 <FontAwesome name="facebook" size={20} color="#1877F2" />
               </SocialIcon>
-
               <SocialIcon
                 aria="Instagram"
                 onPress={() => openURL('https://instagram.com')}
               >
                 <AntDesign name="instagram" size={20} color="#E4405F" />
               </SocialIcon>
-
               <SocialIcon
                 aria="X / Twitter"
                 onPress={() => openURL('https://twitter.com')}
               >
                 <Feather name="twitter" size={20} color="#1DA1F2" />
               </SocialIcon>
-
               <SocialIcon
                 aria="LinkedIn"
                 onPress={() => openURL('https://linkedin.com')}
               >
                 <Entypo name="linkedin" size={20} color="#0077B5" />
               </SocialIcon>
-
               <SocialIcon
                 aria="Call"
                 onPress={() => openURL('tel:+16827199102')}
@@ -209,28 +252,28 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
-
-      {/* floating “Home” pill */}
-      {showHomePill && (
-        <View style={styles.fabBar} pointerEvents="box-none">
-          <View style={styles.fabContainer}>
-            <TouchableOpacity
-              style={styles.fab}
-              activeOpacity={0.85}
-              onPress={() => router.replace('/(tabs)/home')}
-            >
-              <MaterialIcons name="home" size={20} color="#fff" />
-              <Text style={styles.fabText}>Home</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* helpers                                                            */
+/* --- Components --- */
+function StatBlock({ icon, label, value }: { icon: React.ReactNode; label: string; value: any }) {
+  return (
+    <View style={styles.statBlock}>
+      <View style={{ marginBottom: 2 }}>{icon}</View>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+function MetricBlock({ label, value }: { label: string; value: any }) {
+  return (
+    <View style={styles.metricBlock}>
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricLabel}>{label}</Text>
+    </View>
+  );
+}
 function openURL(url: string) {
   if (Platform.OS === 'web') {
     window.open(url, '_blank', 'noopener');
@@ -238,7 +281,6 @@ function openURL(url: string) {
     Linking.openURL(url);
   }
 }
-
 function ActionButton({
   icon,
   label,
@@ -268,7 +310,6 @@ function ActionButton({
     </TouchableOpacity>
   );
 }
-
 function SocialIcon({
   children,
   onPress,
@@ -292,12 +333,9 @@ function SocialIcon({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* stylesheet                                                         */
+/* --- Styles --- */
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
-
-  /* banner */
   banner: {
     backgroundColor: bannerGreen,
     paddingVertical: 10,
@@ -316,8 +354,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     fontSize: 14,
   },
-
-  /* layout */
   scrollContent: {
     paddingTop: 26,
     paddingBottom: 140,
@@ -326,56 +362,104 @@ const styles = StyleSheet.create({
   },
   centerWrap: { width: '100%', maxWidth: MAX_WIDTH },
 
-  /* headings */
-  title: {
-    fontSize: 30,
-    fontWeight: '700',
-    textAlign: 'center',
-    color: primaryDark,
-    marginBottom: 8,
-  },
-  subtitle: {
-    textAlign: 'center',
-    color: primaryDark,
-    opacity: 0.78,
-    fontSize: 13.5,
-    lineHeight: 18,
-    marginBottom: 24,
-    paddingHorizontal: 24,
-  },
-
-  /* focus card */
-  focusGroup: {
-    width: '100%',
-    backgroundColor: cardBg,
+  // --- Modern Unified Card ---
+   mainCard: {
+    backgroundColor: '#9ff0dbff', // soft mint, not white
     borderRadius: 28,
-    paddingVertical: 32,
-    paddingHorizontal: 44,
+    paddingVertical: 30,
+    paddingHorizontal: 40,
+    marginBottom: 36,
+    shadowColor: cardShadow,
+    shadowOpacity: 0.11,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
     borderWidth: 1,
     borderColor: Colors.border,
-    shadowColor: Colors.shadow,
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 6 },
-    transitionDuration: '150ms',
-    ...Platform.select({
-      web: { backdropFilter: 'blur(5px)' } as any,
-    }),
+    width: '100%',
+    maxWidth: 510,
+    alignSelf: 'center',
   },
-  focusGroupHover:
-    Platform.OS === 'web'
-      ? ({
-          transform: 'translateY(-6px)',
-          boxShadow: '0 14px 34px rgba(0,0,0,0.12)',
-        } as any)
-      : {},
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  avatarCircle: {
+    width: 62, height: 62, borderRadius: 31,
+    backgroundColor: '#e8f2ed',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  avatarImg: { width: 62, height: 62, borderRadius: 31 },
+  profileDetails: { marginLeft: 16, flex: 1 },
+  profileName: {
+    fontSize: 22, fontWeight: '700', color: primaryDark, marginBottom: 2,
+  },
+  profileEmail: {
+    fontSize: 15, color: '#333', opacity: 0.8, marginBottom: 3,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+    gap: 3,
+  },
+  statBlock: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#ddf0ecff',
+    marginHorizontal: 2,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: primaryDark,
+    marginTop: 1,
+  },
+  statLabel: {
+    fontSize: 12.2,
+    fontWeight: '600',
+    color: primaryDark,
+    opacity: 0.8,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  assignmentList: {
+    marginTop: 7,
+    marginBottom: 3,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 5,
+    gap: 2,
+  },
+  assignmentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+    gap: 6,
+  },
+  assignmentTitle: {
+    fontSize: 14,
+    color: primaryDark,
+    marginLeft: 5,
+    textDecorationLine: 'underline',
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: 17,
+    opacity: 0.5,
+  },
 
-  /* metrics */
+  // --- Dashboard metrics ---
   metricsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: 28,
+    marginBottom: 26,
+    gap: 6,
   },
   metricBlock: { flex: 1, alignItems: 'center' },
   metricValue: {
@@ -391,33 +475,28 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     letterSpacing: 0.5,
   },
-
-  /* timestamp */
   timestampRow: {
     position: 'relative',
-    marginBottom: 24,
+    marginBottom: 16,
+    alignItems: 'flex-end',
   },
   updatedText: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
     fontSize: 11,
     color: primaryDark,
     opacity: 0.55,
+    textAlign: 'right',
   },
-
-  /* actions */
   actionsWrap: { width: '100%', alignItems: 'center' },
   actionBtn: {
     width: '100%',
-    maxWidth: BUTTON_MAX_WIDTH,
+    maxWidth: 350,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 999,
     paddingVertical: 14,
     paddingHorizontal: 26,
-    marginBottom: 18,
+    marginBottom: 13,
     shadowColor: Colors.shadow,
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -429,8 +508,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     fontSize: 14.5,
   },
-
-  /* footer */
+  // --- Footer ---
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -440,24 +518,6 @@ const styles = StyleSheet.create({
     rowGap: 16,
   },
   footerCopy: { fontSize: 12, color: primaryDark, opacity: 0.7 },
-  socialRow:  { flexDirection: 'row', alignItems: 'center', columnGap: 24 },
-  iconWrap:   { padding: 4, borderRadius: 6 },
-
-  /* floating pill */
-  fabBar: { position: 'absolute', bottom: 16, left: 0, right: 0, alignItems: 'center' },
-  fabContainer: { backgroundColor: 'transparent' },
-  fab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: primaryDark,
-    paddingHorizontal: 28,
-    paddingVertical: 13,
-    borderRadius: 40,
-    shadowColor: Colors.shadow,
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 5,
-  },
-  fabText: { color: '#fff', fontWeight: '600', marginLeft: 8, fontSize: 14 },
+  socialRow: { flexDirection: 'row', alignItems: 'center', columnGap: 24 },
+  iconWrap: { padding: 4, borderRadius: 6 },
 });
