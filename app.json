@@ -2,7 +2,7 @@
   "expo": {
     "name": "highwayads-driver",
     "slug": "highwayads-driver",
-    "version": "1.0.1.4",
+    "version": "1.0.1.5",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "highwayadsdriver",
@@ -16,10 +16,17 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#2d6a4f"
       },
-      "edgeToEdgeEnabled": true,
+      "android": {
       "package": "com.kevin100.highwayadsdriver",
-      "versionCode": 5
-    },
+      "versionCode": 6,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "ACCESS_BACKGROUND_LOCATION"
+      ],
+      "edgeToEdgeEnabled": true
+      },
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -47,4 +54,4 @@
       }
     }
   }
-}
+  }}

@@ -6,7 +6,7 @@ import {
   MaterialIcons,
 } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { router } from 'expo-router';
+import { router, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Image,
@@ -16,11 +16,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  ToastAndroid,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { useAuth } from '../../components/AuthProvider';
+import { useTracking } from '../../components/TrackingContext';
 import Colors from '../../constants/Colors';
+
 
 /* ---- Constants ---- */
 const MAX_WIDTH = 860;
@@ -33,6 +36,8 @@ const actionGreenD = '#1f5b43';
 
 export default function HomeScreen() {
   const { logout, token } = useAuth();
+const { state, startTracking, resumeTracking } = useTracking();
+
 
   // Driver info
   const [driverName, setDriverName] = useState('Driver');
@@ -196,21 +201,21 @@ export default function HomeScreen() {
                 </Text>
               </View>
             )}
-            {/* Action Buttons */}
-            <View style={styles.actionsWrap}>
-              <ActionButton
-                icon="open-in-new"
-                label="Open Dashboard"
-                onPress={handleOpenDashboard}
-                background={actionGreen}
-              />
-              <ActionButton
-                icon="logout"
-                label="Logout"
-                onPress={handleLogout}
-                background={actionGreenD}
-              />
-            </View>
+           <View style={styles.actionsWrap}>
+          <TripToggleButton />
+          <ActionButton
+            icon="open-in-new"
+            label="Open Dashboard"
+            onPress={handleOpenDashboard}
+            background={actionGreen}
+          />
+          <ActionButton
+            icon="logout"
+            label="Logout"
+            onPress={handleLogout}
+            background={actionGreenD}
+          />
+        </View>
           </View>
           {/* Footer */}
           <View style={styles.footerRow}>
@@ -255,6 +260,42 @@ export default function HomeScreen() {
     </View>
   );
 }
+
+function TripToggleButton() {
+  const { state, startTracking, pauseTracking, resumeTracking } = useTracking();
+  const router = useRouter();
+
+  const handlePress = () => {
+    if (state === 'idle') {
+      startTracking();
+      router.push('/trip-tracker');
+    } else if (state === 'tracking') {
+      pauseTracking();
+      router.replace('/home'); // or router.push if you prefer
+    } else if (state === 'paused') {
+      resumeTracking();
+      ToastAndroid.show('Now Tracking', ToastAndroid.SHORT);
+      router.push('/trip-tracker');
+    }
+  };
+
+  const getLabel = () => {
+    if (state === 'idle') return 'Start';
+    if (state === 'tracking') return 'Pause';
+    if (state === 'paused') return 'Resume';
+    return 'Start';
+  };
+
+  return (
+    <ActionButton
+      icon="navigation"
+      label={getLabel()}
+      onPress={handlePress}
+      background="#40916c"
+    />
+  );
+}
+
 
 /* --- Components --- */
 function StatBlock({ icon, label, value }: { icon: React.ReactNode; label: string; value: any }) {
