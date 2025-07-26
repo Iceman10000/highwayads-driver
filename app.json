@@ -13,13 +13,18 @@
     },
     "android": {
       "package": "com.kevin100.highwayadsdriver",
-      "versionCode": 6,
+      "versionCode": 8,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "FOREGROUND_SERVICE",
         "ACCESS_BACKGROUND_LOCATION"
       ],
+       "config": {
+      "googleMaps": {
+         "apiKey": "${GOOGLE_MAPS_ANDROID_APIKEY}"
+       }
+     },
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#2d6a4f"
