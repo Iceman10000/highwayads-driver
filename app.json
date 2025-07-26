@@ -12,11 +12,6 @@
       "supportsTablet": true
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#2d6a4f"
-      },
-      "android": {
       "package": "com.kevin100.highwayadsdriver",
       "versionCode": 6,
       "permissions": [
@@ -25,8 +20,12 @@
         "FOREGROUND_SERVICE",
         "ACCESS_BACKGROUND_LOCATION"
       ],
-      "edgeToEdgeEnabled": true
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#2d6a4f"
       },
+      "edgeToEdgeEnabled": true
+    },
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -54,4 +53,4 @@
       }
     }
   }
-  }}
+}
