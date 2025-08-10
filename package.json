@@ -49,7 +49,8 @@
     "react-native-web": "~0.20.0",
     "react-native-webview": "^13.13.5",
     "expo-task-manager": "~13.1.6",
-    "expo-crypto": "~14.1.5"
+    "expo-crypto": "~14.1.5",
+    "react-native-edge-to-edge": "1.6.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

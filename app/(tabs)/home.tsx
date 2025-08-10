@@ -20,10 +20,10 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // ✅ edge-to-edge
 import { useAuth } from '../../components/AuthProvider';
 import { useTracking } from '../../components/TrackingContext';
 import Colors from '../../constants/Colors';
-
 
 /* ---- Constants ---- */
 const MAX_WIDTH = 860;
@@ -36,8 +36,7 @@ const actionGreenD = '#1f5b43';
 
 export default function HomeScreen() {
   const { logout, token } = useAuth();
-const { state, startTracking, resumeTracking } = useTracking();
-
+  const insets = useSafeAreaInsets(); // ✅ edge-to-edge
 
   // Driver info
   const [driverName, setDriverName] = useState('Driver');
@@ -46,7 +45,7 @@ const { state, startTracking, resumeTracking } = useTracking();
   const [lifetimeImpressions, setLifetimeImpressions] = useState(0);
   const [pendingPayments, setPendingPayments] = useState(0);
   const [assignmentCount, setAssignmentCount] = useState(0);
-  const [assignments, setAssignments] = useState([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
 
   // Dashboard metrics
   const [miles, setMiles] = useState(0);
@@ -112,12 +111,19 @@ const { state, startTracking, resumeTracking } = useTracking();
 
   return (
     <View style={styles.screen}>
-      <View style={styles.banner}>
+      {/* ✅ add top safe-area so banner never sits under the status bar */}
+      <View style={[styles.banner, { paddingTop: 10 + insets.top }]}>
         <Text style={styles.bannerText}>WELCOME TO HIGHWAYADS APP</Text>
       </View>
+
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          // ✅ add bottom safe-area so buttons aren't under the gesture bar
+          { paddingBottom: 140 + insets.bottom }
+        ]}
         keyboardShouldPersistTaps="handled"
+        contentInsetAdjustmentBehavior="automatic"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -150,6 +156,7 @@ const { state, startTracking, resumeTracking } = useTracking();
                 )}
               </View>
             </View>
+
             {/* Stats Row */}
             <View style={styles.statsGrid}>
               <StatBlock
@@ -170,6 +177,7 @@ const { state, startTracking, resumeTracking } = useTracking();
                 value={pendingPayments}
               />
             </View>
+
             {/* Assignment List */}
             {assignments.length > 0 && (
               <View style={styles.assignmentList}>
@@ -185,14 +193,17 @@ const { state, startTracking, resumeTracking } = useTracking();
                 ))}
               </View>
             )}
+
             {/* Divider */}
             <View style={styles.cardDivider} />
+
             {/* Dashboard Metrics */}
             <View style={styles.metricsRow}>
               <MetricBlock label="MILES" value={miles} />
               <MetricBlock label="IMPRESSIONS" value={impressions} />
               <MetricBlock label="EARNINGS" value={`$${earnings}`} />
             </View>
+
             {/* Timestamp */}
             {lastUpdated && (
               <View style={styles.timestampRow}>
@@ -201,22 +212,24 @@ const { state, startTracking, resumeTracking } = useTracking();
                 </Text>
               </View>
             )}
-           <View style={styles.actionsWrap}>
-          <TripToggleButton />
-          <ActionButton
-            icon="open-in-new"
-            label="Open Dashboard"
-            onPress={handleOpenDashboard}
-            background={actionGreen}
-          />
-          <ActionButton
-            icon="logout"
-            label="Logout"
-            onPress={handleLogout}
-            background={actionGreenD}
-          />
-        </View>
+
+            <View style={styles.actionsWrap}>
+              <TripToggleButton />
+              <ActionButton
+                icon="open-in-new"
+                label="Open Dashboard"
+                onPress={handleOpenDashboard}
+                background={actionGreen}
+              />
+              <ActionButton
+                icon="logout"
+                label="Logout"
+                onPress={handleLogout}
+                background={actionGreenD}
+              />
+            </View>
           </View>
+
           {/* Footer */}
           <View style={styles.footerRow}>
             <Text style={styles.footerCopy}>
@@ -239,7 +252,7 @@ const { state, startTracking, resumeTracking } = useTracking();
                 aria="X / Twitter"
                 onPress={() => openURL('https://twitter.com')}
               >
-                <Feather name="twitter" size={20} color="#1DA1F2" />
+                <Feather name="twitter" size={20} />
               </SocialIcon>
               <SocialIcon
                 aria="LinkedIn"
@@ -271,10 +284,12 @@ function TripToggleButton() {
       router.push('/trip-tracker');
     } else if (state === 'tracking') {
       pauseTracking();
-      router.replace('/home'); // or router.push if you prefer
+      router.replace('/home');
     } else if (state === 'paused') {
       resumeTracking();
-      ToastAndroid.show('Now Tracking', ToastAndroid.SHORT);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Now Tracking', ToastAndroid.SHORT); // ✅ guard
+      }
       router.push('/trip-tracker');
     }
   };
@@ -295,7 +310,6 @@ function TripToggleButton() {
     />
   );
 }
-
 
 /* --- Components --- */
 function StatBlock({ icon, label, value }: { icon: React.ReactNode; label: string; value: any }) {
@@ -379,7 +393,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   banner: {
     backgroundColor: bannerGreen,
-    paddingVertical: 10,
+    paddingVertical: 10, // top is increased at runtime with insets.top
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
@@ -397,15 +411,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 26,
-    paddingBottom: 140,
+    paddingBottom: 140, // bottom is increased at runtime with insets.bottom
     paddingHorizontal: 18,
     alignItems: 'center',
   },
   centerWrap: { width: '100%', maxWidth: MAX_WIDTH },
 
   // --- Modern Unified Card ---
-   mainCard: {
-    backgroundColor: '#9ff0dbff', // soft mint, not white
+  mainCard: {
+    backgroundColor: '#9ff0dbff',
     borderRadius: 28,
     paddingVertical: 30,
     paddingHorizontal: 40,
