@@ -13,7 +13,6 @@
     },
     "android": {
       "package": "com.kevin100.highwayadsdriver",
-      "versionCode": 9,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
